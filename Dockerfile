@@ -1,6 +1,6 @@
-FROM node:18-alpine as build
+FROM node:18-alpine as frontend-build
 
-WORKDIR /app
+WORKDIR /app/frontend
 
 COPY package*.json ./
 
@@ -10,11 +10,26 @@ COPY . .
 
 RUN npm run build
 
+FROM node:18-alpine as backend-build
+
+WORKDIR /app/backend
+
+COPY server/package*.json ./
+
+RUN npm install
+
+COPY server .
+
 FROM nginx:alpine
 
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 
+RUN apk add --update nodejs npm
 
-EXPOSE 80
+COPY --from=backend-build /app/backend /app/backend
 
-CMD ["nginx", "-g", "daemon off;"] 
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80 3001
+
+CMD ["/bin/sh", "-c", "cd /app/backend && node server.js & nginx -g 'daemon off;'"] 

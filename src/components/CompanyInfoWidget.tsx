@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import companiesData from '../api/companies-lookup.json';
 import CompanySelector from './UI/CompanySelector';
 import Loader from './UI/Loader';
 import NotFound from './UI/NotFound';
@@ -18,18 +17,36 @@ const CompanyInfoWidget: React.FC<CompanyInfoWidgetProps> = ({
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [availableTickers, setAvailableTickers] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const tickers = companiesData.map((company) => company.ticker);
-    setAvailableTickers(tickers);
+    const fetchTickers = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/companies');
+        if (!response.ok) {
+          throw new Error('Failed to fetch companies data');
+        }
 
-    if (
-      (!ticker || !tickers.includes(ticker)) &&
-      tickers.length > 0 &&
-      onTickerChange
-    ) {
-      onTickerChange(tickers[0]);
-    }
+        const companies = await response.json();
+
+        const tickers = companies.map((company: CompanyInfo) => company.ticker);
+
+        setAvailableTickers(tickers);
+
+        if (
+          (!ticker || !tickers.includes(ticker)) &&
+          tickers.length > 0 &&
+          onTickerChange
+        ) {
+          onTickerChange(tickers[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching tickers:', error);
+        setError('Failed to load companies data. Please try again later.');
+      }
+    };
+
+    fetchTickers();
   }, [ticker, onTickerChange]);
 
   useEffect(() => {
@@ -37,20 +54,28 @@ const CompanyInfoWidget: React.FC<CompanyInfoWidgetProps> = ({
       if (!ticker) return;
 
       setLoading(true);
+      setError(null);
+
       try {
-        const company = companiesData.find(
-          (company) => company.ticker === ticker
+        const response = await fetch(
+          `http://localhost:3001/companies?ticker=${ticker}`
         );
+        if (!response.ok) {
+          throw new Error(`Failed to fetch company data for ticker ${ticker}`);
+        }
 
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        const companies = await response.json();
 
-        if (company) {
-          setCompanyInfo(company as CompanyInfo);
+        if (companies && companies.length > 0) {
+          setCompanyInfo(companies[0] as CompanyInfo);
         } else {
-          console.error(`Company with ticker ${ticker} not found`);
+          setError(`Company with ticker ${ticker} not found`);
+          setCompanyInfo(null);
         }
       } catch (error) {
         console.error('Error fetching company data:', error);
+        setError('Failed to load company data. Please try again later.');
+        setCompanyInfo(null);
       } finally {
         setLoading(false);
       }
@@ -67,6 +92,10 @@ const CompanyInfoWidget: React.FC<CompanyInfoWidgetProps> = ({
 
   if (loading) {
     return <Loader />;
+  }
+
+  if (error) {
+    return <NotFound message={error} />;
   }
 
   if (!companyInfo) {

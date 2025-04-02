@@ -44,7 +44,15 @@ An interactive React application for displaying company information in a mosaic 
    yarn dev
    ```
 
-4. Open your browser and navigate to `http://localhost:5173`
+4. Start the API server (required for data fetching):
+
+   ```bash
+   npm run server
+   # or
+   yarn server
+   ```
+
+5. Open your browser and navigate to `http://localhost:5173`
 
 ### Running with Docker
 
@@ -91,6 +99,7 @@ An interactive React application for displaying company information in a mosaic 
 ### Available Scripts
 
 - `npm run dev` - Start development server
+- `npm run server` - Start API server
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
 - `npm run test` - Run tests
